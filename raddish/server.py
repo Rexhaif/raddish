@@ -100,7 +100,7 @@ class RaddishServer:
 
         del current_fn_data["workers"][self.worker_id]
 
-        if len(current_fn_data) == 0:
+        if len(current_fn_data['workers']) == 0:
             await self.redis_client.hdel(f"{self.key_prefix}/functions", function_name)
         else:
             await self.redis_client.hset(
