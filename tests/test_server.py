@@ -44,14 +44,15 @@ class TestWorkerAddOne(AsyncWorker):
         return {
             "number": input,
         }
-    
+
+
 class TestWorkerPower2(AsyncWorker):
     async def setup(self) -> None:
         logger.info("Setting up test worker")
 
     async def __call__(self, input: dict[str, any]) -> dict[str, any]:
         input: int = input["number"]
-        input = input ** 2
+        input = input**2
         await asyncio.sleep(10)
         return {
             "number": input,

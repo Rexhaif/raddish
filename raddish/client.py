@@ -36,7 +36,36 @@ class AsyncRaddishClient:
         self.key_prefix: str = key_prefix
         self.logger: logging.Logger = logging.getLogger("raddish-client")
 
-    async def __submit_job(self, function_name: str, input: dict[str, Any]) -> str:
+    async def __has_workers(self, function_name: str) -> bool:
+        """
+        Ensure that there is at least one worker running for the given function
+        """
+        if await self.redis_client.hexists(
+            f"{self.key_prefix}/functions", function_name
+        ):
+            fn_data: dict[str, Any] = json.loads(
+                await self.redis_client.hget(
+                    f"{self.key_prefix}/functions", function_name
+                )
+            )
+            if len(fn_data["workers"]) > 0:
+                self.logger.info(
+                    f"Found {len(fn_data['workers'])} workers for function {function_name}"
+                )
+                return True
+
+        self.logger.info(f"No workers for function {function_name} are running")
+        return False
+
+    async def __submit_job(
+        self, function_name: str, input: dict[str, Any], ensure_workers: bool
+    ) -> str:
+        if ensure_workers:
+            if not await self.__has_workers(function_name):
+                raise RuntimeError(
+                    f"No workers for function {function_name} are running"
+                )
+
         req_id: str = str(uuid.uuid4())
         fn_input: dict[str, Any] = {
             "req_id": req_id,
@@ -70,9 +99,15 @@ class AsyncRaddishClient:
         return fn_output
 
     async def call(
-        self, function_name: str, input: dict[str, Any], timeout: int = 360
+        self,
+        function_name: str,
+        input: dict[str, Any],
+        timeout: int = 360,
+        ensure_workers: bool = True,
     ) -> dict[str, Any]:
-        req_id: str = await self.__submit_job(function_name, input)
+        req_id: str = await self.__submit_job(
+            function_name, input, ensure_workers=ensure_workers
+        )
         fn_output: dict[str, Any] = await self.__get_output(
             function_name, req_id, timeout=timeout
         )
@@ -92,6 +127,7 @@ class AsyncRaddishClient:
         inputs: list[dict[str, Any]],
         timeout: int = 360,
         raise_on_error: bool = True,
+        ensure_workers: bool = True,
     ) -> list[dict[str, Any]]:
         if isinstance(function_name, str):
             function_name: list[str] = [function_name] * len(inputs)
@@ -101,7 +137,9 @@ class AsyncRaddishClient:
             )
 
         req_ids: list[str] = [
-            await self.__submit_job(function_name[i], inputs[i])
+            await self.__submit_job(
+                function_name[i], inputs[i], ensure_workers=ensure_workers
+            )
             for i in range(len(inputs))
         ]
 
@@ -139,7 +177,32 @@ class SyncRaddishClient:
         self.key_prefix: str = key_prefix
         self.logger: logging.Logger = logging.getLogger("raddish-client")
 
-    def __submit_job(self, function_name: str, input: dict[str, Any]) -> str:
+    def __has_workers(self, function_name: str) -> bool:
+        """
+        Ensure that there is at least one worker running for the given function
+        """
+        if self.redis_client.hexists(f"{self.key_prefix}/functions", function_name):
+            fn_data: dict[str, Any] = json.loads(
+                self.redis_client.hget(f"{self.key_prefix}/functions", function_name)
+            )
+            if len(fn_data["workers"]) > 0:
+                self.logger.info(
+                    f"Found {len(fn_data['workers'])} workers for function {function_name}"
+                )
+                return True
+
+        self.logger.info(f"No workers for function {function_name} are running")
+        return False
+
+    def __submit_job(
+        self, function_name: str, input: dict[str, Any], ensure_workers: bool = True
+    ) -> str:
+        if ensure_workers:
+            if not self.__has_workers(function_name):
+                raise RuntimeError(
+                    f"No workers for function {function_name} are running"
+                )
+
         req_id: str = str(uuid.uuid4())
         fn_input: dict[str, Any] = {
             "req_id": req_id,
@@ -170,9 +233,15 @@ class SyncRaddishClient:
         return fn_output
 
     def call(
-        self, function_name: str, input: dict[str, Any], timeout: int = 360
+        self,
+        function_name: str,
+        input: dict[str, Any],
+        timeout: int = 360,
+        ensure_workers: bool = True,
     ) -> dict[str, Any]:
-        req_id: str = self.__submit_job(function_name, input)
+        req_id: str = self.__submit_job(
+            function_name, input, ensure_workers=ensure_workers
+        )
         fn_output: dict[str, Any] = self.__get_output(
             function_name, req_id, timeout=timeout
         )
@@ -192,6 +261,7 @@ class SyncRaddishClient:
         inputs: list[dict[str, Any]],
         timeout: int = 360,
         raise_on_error: bool = True,
+        ensure_workers: bool = True,
     ) -> list[dict[str, Any]]:
         if isinstance(function_name, str):
             function_name: list[str] = [function_name] * len(inputs)
@@ -201,7 +271,10 @@ class SyncRaddishClient:
             )
 
         req_ids: list[str] = [
-            self.__submit_job(function_name[i], inputs[i]) for i in range(len(inputs))
+            self.__submit_job(
+                function_name[i], inputs[i], ensure_workers=ensure_workers
+            )
+            for i in range(len(inputs))
         ]
 
         fn_outputs: list[dict[str, Any]] = [

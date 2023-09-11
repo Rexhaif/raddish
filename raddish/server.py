@@ -100,7 +100,7 @@ class RaddishServer:
 
         del current_fn_data["workers"][self.worker_id]
 
-        if len(current_fn_data['workers']) == 0:
+        if len(current_fn_data["workers"]) == 0:
             await self.redis_client.hdel(f"{self.key_prefix}/functions", function_name)
         else:
             await self.redis_client.hset(
@@ -115,12 +115,12 @@ class RaddishServer:
     def add_worker(self, function_name: str, worker: AsyncWorker) -> None:
         self.workers[function_name] = worker
 
-    async def __await_for_input(self, function_name: str, input_num: int = 0) -> dict[str, Any]:
+    async def __await_for_input(
+        self, function_name: str, input_num: int = 0
+    ) -> dict[str, Any]:
         _t0 = time.monotonic()
         fn_input: bytes = (
-            await self.redis_client.blpop(
-                [f"{self.key_prefix}/{function_name}/input"]
-            )
+            await self.redis_client.blpop([f"{self.key_prefix}/{function_name}/input"])
         )[1]
         _t1 = time.monotonic()
         self.logger.info(
@@ -130,21 +130,16 @@ class RaddishServer:
         req_id: str = fn_input["req_id"]
         fn_input: dict[str, Any] = fn_input["input"]
         return req_id, fn_input
-    
+
     async def __process_input(
-            self, 
-            function_name: str, 
-            worker: AsyncWorker, 
-            fn_input: dict[str, Any]
+        self, function_name: str, worker: AsyncWorker, fn_input: dict[str, Any]
     ) -> tuple[str | None, dict[str, Any] | None, float]:
         _t0 = time.monotonic()
         error: str | None = None
         try:
             fn_output: any = await worker(fn_input)
         except Exception as e:
-            self.logger.error(
-                f"Error processing input for function {function_name}"
-            )
+            self.logger.error(f"Error processing input for function {function_name}")
             self.logger.error(e)
             error = str(e)
             fn_output = None
@@ -152,14 +147,14 @@ class RaddishServer:
         _t1 = time.monotonic()
 
         return error, fn_output, _t1 - _t0
-    
+
     async def __send_output(
-            self,
-            function_name: str,
-            req_id: str,
-            error: str | None,
-            fn_output: dict[str, Any] | None,
-            processing_time: float
+        self,
+        function_name: str,
+        req_id: str,
+        error: str | None,
+        fn_output: dict[str, Any] | None,
+        processing_time: float,
     ) -> None:
         fn_output: dict[str, any] = {
             "ready_at": datetime.datetime.now(),
@@ -194,7 +189,7 @@ class RaddishServer:
                     req_id, fn_input = await self.__await_for_input(
                         function_name, input_counter
                     )
-                    
+
                     error, fn_output, processing_time = await self.__process_input(
                         function_name, worker, fn_input
                     )

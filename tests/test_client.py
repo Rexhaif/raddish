@@ -14,10 +14,10 @@
 # =============================================================================
 
 
+import argparse as ap
 import asyncio
 import logging
 import os
-import argparse as ap
 
 from redis.asyncio import Redis
 from rich.logging import RichHandler

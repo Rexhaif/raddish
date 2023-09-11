@@ -14,6 +14,6 @@
 # =============================================================================
 
 from .client import AsyncRaddishClient, SyncRaddishClient
-from .server import RaddishServer, AsyncWorker
+from .server import AsyncWorker, RaddishServer
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
