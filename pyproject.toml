@@ -1,7 +1,8 @@
 [tool.poetry]
 name = "raddish"
-version = "0.1.0"
-description = ""
+version = "0.2.0"
+description = "Async-native Redis-backed RPC and job queue"
+license = "Apache-2.0"
 authors = ["Daniil Larionov <rexhaif.io@gmail.com>"]
 readme = "README.md"
 

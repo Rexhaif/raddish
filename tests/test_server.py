@@ -21,7 +21,7 @@ import os
 from redis.asyncio import Redis
 from rich.logging import RichHandler
 
-from raddish import RaddishServer, Worker
+from raddish import AsyncWorker, RaddishServer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,14 +33,25 @@ logging.basicConfig(
 logger = logging.getLogger("raddish-test")
 
 
-class TestWorker(Worker):
+class TestWorkerAddOne(AsyncWorker):
     async def setup(self) -> None:
         logger.info("Setting up test worker")
 
     async def __call__(self, input: dict[str, any]) -> dict[str, any]:
-        logger.info(f"Received input: {input}")
         input: int = input["number"]
         input += 1
+        await asyncio.sleep(10)
+        return {
+            "number": input,
+        }
+    
+class TestWorkerPower2(AsyncWorker):
+    async def setup(self) -> None:
+        logger.info("Setting up test worker")
+
+    async def __call__(self, input: dict[str, any]) -> dict[str, any]:
+        input: int = input["number"]
+        input = input ** 2
         await asyncio.sleep(10)
         return {
             "number": input,
@@ -52,7 +63,8 @@ async def main() -> None:
         os.environ.get("REDIS_URL", "redis://localhost:6379")
     )
     server: RaddishServer = RaddishServer(redis_client)
-    server.add_worker("add_one", TestWorker())
+    server.add_worker("add_one", TestWorkerAddOne())
+    server.add_worker("power_2", TestWorkerPower2())
     await server.start()
 
 

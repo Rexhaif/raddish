@@ -17,11 +17,12 @@
 import asyncio
 import logging
 import os
+import argparse as ap
 
 from redis.asyncio import Redis
 from rich.logging import RichHandler
 
-from raddish import RaddishClient
+from raddish import AsyncRaddishClient
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,19 +34,27 @@ logging.basicConfig(
 logger = logging.getLogger("raddish-test")
 
 
-async def main() -> None:
+async def main(fn_name: str = "add_one") -> None:
     redis_client: Redis = Redis.from_url(
         os.environ.get("REDIS_URL", "redis://localhost:6379")
     )
-    client: RaddishClient = RaddishClient(redis_client)
+    client: AsyncRaddishClient = AsyncRaddishClient(redis_client)
 
     counter: int = 0
     for _ in range(5):
         logger.info(f"Sending input {counter}")
-        counter = (await client("add_one", {"number": counter}))["number"]
+        counter = (await client.call(fn_name, {"number": counter}))["number"]
         logger.info(f"Received output {counter}")
 
 
 if __name__ == "__main__":
+    parser = ap.ArgumentParser()
+    parser.add_argument(
+        "--fn-name",
+        type=str,
+        default="add_one",
+        help="Name of the function to call",
+    )
+    args = parser.parse_args()
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    loop.run_until_complete(main(args.fn_name))

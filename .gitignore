@@ -1,3 +1,5 @@
 *pycache*
 poetry.lock
 *.vscode
+*dist/*
+!*.gitkeep
