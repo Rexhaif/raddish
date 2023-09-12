@@ -23,8 +23,9 @@ import time
 import uuid
 from typing import Any
 
-import orjson as json
 from redis.asyncio import Redis
+
+from .utils import unified_json_dumps, unified_json_loads
 
 
 class AsyncWorker(abc.ABC):
@@ -70,7 +71,7 @@ class RaddishServer:
             f"{self.key_prefix}/functions", function_name
         ):
             self.logger.info(f"Updating function {function_name}")
-            current_fn_data: dict[str, dict] = json.loads(
+            current_fn_data: dict[str, dict] = unified_json_loads(
                 await self.redis_client.hget(
                     f"{self.key_prefix}/functions", function_name
                 )
@@ -84,7 +85,7 @@ class RaddishServer:
         await self.redis_client.hset(
             f"{self.key_prefix}/functions",
             function_name,
-            json.dumps(current_fn_data),
+            unified_json_dumps(current_fn_data),
         )
         self.logger.info(
             f"Announced worker {self.worker_id} for function {function_name}"
@@ -94,7 +95,7 @@ class RaddishServer:
         self.logger.info(
             f"Deannouncing worker {self.worker_id} for function {function_name}"
         )
-        current_fn_data: dict[str, Any] = json.loads(
+        current_fn_data: dict[str, Any] = unified_json_loads(
             await self.redis_client.hget(f"{self.key_prefix}/functions", function_name)
         )
 
@@ -106,7 +107,7 @@ class RaddishServer:
             await self.redis_client.hset(
                 f"{self.key_prefix}/functions",
                 function_name,
-                json.dumps(current_fn_data),
+                unified_json_dumps(current_fn_data),
             )
         self.logger.info(
             f"Deannounced worker {self.worker_id} for function {function_name}"
@@ -126,7 +127,7 @@ class RaddishServer:
         self.logger.info(
             f"Received input #{input_num} for function {function_name} after {_t1 - _t0} seconds | Input: {fn_input}"
         )
-        fn_input: dict[str, Any] = json.loads(fn_input)
+        fn_input: dict[str, Any] = unified_json_loads(fn_input)
         req_id: str = fn_input["req_id"]
         fn_input: dict[str, Any] = fn_input["input"]
         return req_id, fn_input
@@ -163,7 +164,7 @@ class RaddishServer:
             "error": error,
             "output": fn_output,
         }
-        fn_output: bytes = json.dumps(fn_output)
+        fn_output: bytes = unified_json_dumps(fn_output)
         self.logger.info(
             f"Output message for function {function_name} has size {len(fn_output)} bytes"
         )

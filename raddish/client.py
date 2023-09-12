@@ -18,9 +18,10 @@ import logging
 import uuid
 from typing import Any
 
-import orjson as json
 from redis import Redis as SyncRedis
 from redis.asyncio import Redis as AsyncRedis
+
+from .utils import unified_json_dumps, unified_json_loads
 
 
 class RaddishRemoteExecutionException(Exception):
@@ -43,7 +44,7 @@ class AsyncRaddishClient:
         if await self.redis_client.hexists(
             f"{self.key_prefix}/functions", function_name
         ):
-            fn_data: dict[str, Any] = json.loads(
+            fn_data: dict[str, Any] = unified_json_loads(
                 await self.redis_client.hget(
                     f"{self.key_prefix}/functions", function_name
                 )
@@ -71,7 +72,7 @@ class AsyncRaddishClient:
             "req_id": req_id,
             "input": input,
         }
-        fn_input: bytes = json.dumps(fn_input)
+        fn_input: bytes = unified_json_dumps(fn_input)
         self.logger.info(f"Sending input for function {function_name}")
         await self.redis_client.lpush(
             f"{self.key_prefix}/{function_name}/input", fn_input
@@ -95,7 +96,7 @@ class AsyncRaddishClient:
         fn_output: bytes = fn_output[1]
 
         self.logger.info(f"Received output for function {function_name}")
-        fn_output: dict[str, any] = json.loads(fn_output)
+        fn_output: dict[str, any] = unified_json_loads(fn_output)
         return fn_output
 
     async def call(
@@ -182,7 +183,7 @@ class SyncRaddishClient:
         Ensure that there is at least one worker running for the given function
         """
         if self.redis_client.hexists(f"{self.key_prefix}/functions", function_name):
-            fn_data: dict[str, Any] = json.loads(
+            fn_data: dict[str, Any] = unified_json_loads(
                 self.redis_client.hget(f"{self.key_prefix}/functions", function_name)
             )
             if len(fn_data["workers"]) > 0:
@@ -208,7 +209,7 @@ class SyncRaddishClient:
             "req_id": req_id,
             "input": input,
         }
-        fn_input: bytes = json.dumps(fn_input)
+        fn_input: bytes = unified_json_dumps(fn_input)
         self.logger.info(f"Sending input for function {function_name}")
         self.redis_client.lpush(f"{self.key_prefix}/{function_name}/input", fn_input)
         return req_id
@@ -229,7 +230,7 @@ class SyncRaddishClient:
 
         fn_output: bytes = fn_output[1]
         self.logger.info(f"Received output for function {function_name}")
-        fn_output: dict[str, any] = json.loads(fn_output)
+        fn_output: dict[str, any] = unified_json_loads(fn_output)
         return fn_output
 
     def call(
