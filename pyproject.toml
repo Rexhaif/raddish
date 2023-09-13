@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "raddish"
-version = "0.2.3"
+version = "0.2.4"
 description = "Async-native Redis-backed RPC and job queue"
 license = "Apache-2.0"
 authors = ["Daniil Larionov <rexhaif.io@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 redis = "^5.0.0"
 pydantic = "^2.2.0"
 orjson = "^3.9.7"
